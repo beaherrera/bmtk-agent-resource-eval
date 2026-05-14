@@ -1,0 +1,18 @@
+# Trial outputs can be large and should usually be regenerated
+trials/*
+!trials/.gitkeep
+
+# Python caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# BMTK/SONATA generated artifacts
+output/
+network/*.h5
+*.h5
+
+# Editor/local state
+.vscode/
+.continue/cache/
+.DS_Store
