@@ -13,8 +13,13 @@ Add a model-resource directory to the main BMTK repository, for example:
 ```text
 bmtk/
   agent_resources/
-    MODELS.md
-    SKILLS.md
+    AGENTS.md
+    skills/
+      01_build_pointnet_network.md
+      02_external_inputs.md
+      03_simulation_config.md
+      04_run_simulation.md
+      05_validate_and_debug.md
     templates/
       pointnet_glif/
       bionet_basic/
@@ -33,7 +38,7 @@ from bmtk.utils.agent_resources import init_agent_project
 init_agent_project("my_model_project")
 ```
 
-The initializer copies `MODELS.md`, `SKILLS.md`, and optional templates into the user's project directory.
+The initializer copies `AGENTS.md`, the `skills/` folder, and optional templates into the user's project directory.
 
 ## 3. Scope clarification
 
@@ -57,16 +62,18 @@ They should not primarily describe:
 
 ### A/B conditions
 
-- **A: Control** — trial project contains only the benchmark prompt.
-- **B: Treatment** — trial project contains the same prompt plus `MODELS.md` and `SKILLS.md`.
+- **A: Control** — trial project contains the benchmark prompt, a minimal
+  environment-only `AGENTS.md`, and starter `components/` parameter JSONs.
+- **B: Treatment** — same starter material as control, plus the full
+  `AGENTS.md` orientation and the `skills/` folder.
 
 ### Agent
 
-Initial candidate:
+Initial candidates (any one, kept fixed across A/B):
 
-- Continue.dev in VS Code
-- Qwen2.5-Coder via Ollama
-- Temperature: 0.1–0.2
+- Cline + Qwen2.5-Coder via Ollama (local/remote)
+- GitHub Copilot Chat (agent mode) + a frontier model
+- Temperature: 0.1–0.2 where exposed
 
 Keep the model, prompt, and environment fixed across A/B trials.
 
@@ -151,7 +158,7 @@ This is not enough for publication-level statistics, but enough to detect large 
 - Start a fresh chat/session for every trial.
 - Use the same model and temperature.
 - Avoid manual corrections before scoring.
-- Record failures as failures; use them to improve `MODELS.md` / `SKILLS.md`.
+- Record failures as failures; use them to improve `AGENTS.md` / `skills/`.
 
 ## 8. Scaling to real use
 
@@ -169,10 +176,10 @@ After the first prompt works, add prompts covering:
 
 Test across:
 
-- Continue.dev + local model
-- GitHub Copilot Chat
+- Cline + local model (Qwen2.5-Coder or similar)
+- GitHub Copilot Chat (agent mode) + frontier model
+- Claude Code
 - Cursor/Windsurf
-- a CLI-based coding agent
 - chat-only model as a negative control
 
 ### 8.3 More robust metrics
@@ -192,7 +199,7 @@ Potential future metrics:
 
 Once the minimal demo shows improvement:
 
-1. Move stable `MODELS.md` and `SKILLS.md` into the BMTK repo.
+1. Move stable `AGENTS.md` and `skills/` into the BMTK repo.
 2. Add a BMTK initializer command.
 3. Add tests ensuring the copied resources remain synchronized.
 4. Add examples generated from the resources.

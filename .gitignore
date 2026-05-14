@@ -1,6 +1,20 @@
 # Trial outputs can be large and should usually be regenerated
 trials/*
 !trials/.gitkeep
+!trials/*/AGENTS.md
+!trials/*/CLAUDE.md
+!trials/*/GEMINI.md
+!trials/*/.clinerules
+!trials/*/.cursorrules
+!trials/*/.github/
+!trials/*/.github/copilot-instructions.md
+!trials/*/skills/
+!trials/*/skills/**
+!trials/*/BENCHMARK_PROMPT.md
+!trials/*/TRIAL_METADATA.yaml
+!trials/*/evaluation.json
+!trials/*/cline_task/
+!trials/*/cline_task/**
 
 # Python caches
 __pycache__/
