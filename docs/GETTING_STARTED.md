@@ -9,13 +9,13 @@ validation.
 The trial initializer writes the canonical `AGENTS.md` plus agent-specific
 alias files, so any of the major agents will see the guidance automatically:
 
-| Agent             | File it reads                          | Captured by                       |
-| ----------------- | -------------------------------------- | --------------------------------- |
-| GitHub Copilot    | `.github/copilot-instructions.md`      | manual chat-transcript copy       |
-| Cline             | `.clinerules` + `AGENTS.md`            | `scripts/capture_cline_task.py`   |
-| Claude Code       | `CLAUDE.md`                            | manual                            |
-| Gemini CLI        | `GEMINI.md`                            | manual                            |
-| Cursor            | `.cursorrules`                         | manual                            |
+| Agent          | File it reads                     | Session data captured by                    |
+| -------------- | --------------------------------- | ------------------------------------------- |
+| GitHub Copilot | `.github/copilot-instructions.md` | manual paste into `cline_task/`             |
+| Cline          | `.clinerules` + `AGENTS.md`       | `scripts/capture_cline_task.py` (automatic) |
+| Claude Code    | `CLAUDE.md`                       | manual paste into `cline_task/`             |
+| Gemini CLI     | `GEMINI.md`                       | manual paste into `cline_task/`             |
+| Cursor         | `.cursorrules`                     | manual paste into `cline_task/`             |
 
 For the control condition the same alias files exist but contain only the
 minimal environment rules — this isolates the treatment effect to the
@@ -25,98 +25,163 @@ minimal environment rules — this isolates the treatment effect to the
 
 - Use **Copilot Chat in agent mode** (so it can create files), not inline
   suggestions.
-- Confirm Copilot is reading the instructions: in the chat sidebar look for a
+- Confirm Copilot is reading the instructions: in the chat sidebar, look for a
   reference to `.github/copilot-instructions.md` in the request context, or
-  open `.github/copilot-instructions.md` in an editor tab before sending the
-  prompt to guarantee it's in context.
-- Copilot has no public per-task storage to snapshot. To capture the run:
-  1. After the agent finishes, copy the chat transcript via the Copilot Chat
-     "..." menu → "Export Chat" (or copy-paste the full conversation) into
-     `trials/<id>/cline_task/transcript.md` so the evaluator picks it up.
-  2. Optionally also save terminal output into
-     `trials/<id>/cline_task/terminal.log`.
-  3. There is no automatic token/duration metric for Copilot — leave
-     `cline_metrics.json` absent and the evaluator will silently skip it.
-- Use one VS Code window per trial. Start a fresh Copilot chat for each
-  trial.
+  open that file in an editor tab before sending the prompt.
+- Use one VS Code window per trial. Start a fresh Copilot chat for each trial.
+
+After the run completes, optionally save the session for later review:
+
+1. Copy the chat transcript (Copilot Chat "..." menu → "Export Chat", or
+   copy-paste) into `trials/<id>/cline_task/transcript.md`.
+2. Copy terminal output into `trials/<id>/cline_task/terminal.log`.
+
+Both files are pre-created as empty stubs by `init_trial.py`. The evaluator
+does **not** parse them — they are for your own qualitative review only.
+The evaluator does read `cline_task/cline_metrics.json` if present (Cline
+only), merging token/duration metrics into `evaluation.json`.
 
 ### Cline specifics
 
-If using Cline with a remote-served model, start an SSH tunnel before running
-trials:
+After each Cline run, capture the task data automatically:
 
 ```bash
-ssh -N -L 11435:localhost:11434 darrell.haufler@10.128.49.71
-curl -s http://localhost:11435/api/tags
+python scripts/capture_cline_task.py --trial-id A001
 ```
+
+This writes `transcript.md`, `terminal.log`, and `cline_metrics.json` into
+`trials/<id>/cline_task/`. The evaluator reads `cline_metrics.json` and merges
+token/duration/tool-use stats into the score output (no effect on score).
 
 ## 2. BMTK conda environment
 
-The evaluator's smoke test uses the `BXP2` env by default (BMTK 1.0.6 +
-NEST 3.0). Verify it works:
+One environment covers both PointNet (NEST) and BioNet (NEURON):
 
 ```bash
-unset PYTHONPATH
-LD_LIBRARY_PATH=/home/dhaufler/anaconda3/envs/BXP2/lib \
-  /home/dhaufler/anaconda3/envs/BXP2/bin/python -c \
-  "import bmtk, nest; from bmtk.simulator import pointnet; print('ok')"
+conda create -n bmtk python=3.9
+conda activate bmtk
+conda install -c conda-forge nest-simulator   # NEST for PointNet
+pip install bmtk neuron                        # BMTK + NEURON for BioNet
 ```
 
-If you want a different env, set `BMTK_CONDA_ENV` before running the
-evaluator. The evaluator clears `PYTHONPATH` and adds the env's `lib/` to
-`LD_LIBRARY_PATH` automatically to avoid the broken system NEST install on
-this host.
+With mamba (faster dependency resolution):
+
+```bash
+mamba create -n bmtk python=3.9 -c conda-forge nest-simulator
+conda activate bmtk
+pip install bmtk neuron
+```
+
+Verify both simulators work:
+
+```bash
+python -c "import bmtk, nest; from bmtk.simulator import pointnet; print('PointNet ok')"
+python -c "import bmtk, neuron; from bmtk.simulator import bionet; print('BioNet ok')"
+```
+
+Then edit the repo-root `ENVIRONMENT.md` to point at your interpreter —
+`init_trial.py` copies this file into every new trial folder automatically.
 
 ## 3. Create A/B trial folders
 
-From the repository root:
+From the repository root, pass `--model` so results are labeled correctly:
 
 ```bash
-python scripts/init_trial.py --trial-id A001 --condition control
-python scripts/init_trial.py --trial-id B001 --condition treatment
+# PointNet trials
+python scripts/init_trial.py \
+    --trial-id A001 --condition control  --simulator pointnet \
+    --model "copilot-gpt-4o"
+python scripts/init_trial.py \
+    --trial-id B001 --condition treatment --simulator pointnet \
+    --model "copilot-gpt-4o"
+
+# BioNet trials
+python scripts/init_trial.py \
+    --trial-id A002 --condition control  --simulator bionet \
+    --model "copilot-gpt-4o"
+python scripts/init_trial.py \
+    --trial-id B002 --condition treatment --simulator bionet \
+    --model "copilot-gpt-4o"
 ```
 
-Each trial folder will contain:
+`--model` is free text — use whatever identifier is meaningful to you
+(e.g. `"claude-sonnet-4-6"`, `"copilot-gpt-4o"`, `"gemini-2.5-pro"`).
+It is stored in `TRIAL_METADATA.yaml` and shown in the summary table; the
+evaluator does not use it for scoring.
+
+Each trial folder contains:
 
 - `BENCHMARK_PROMPT.md` — the task
 - `README.md` — orientation for the agent
 - `AGENTS.md` + alias files — minimal (control) or full (treatment)
-- `skills/` — treatment only
-- `components/` — identical starter NEST parameter JSONs in both conditions
+- `pointnet_skills/` or `bionet_skills/` — treatment only
+- `components/` — identical starter parameter JSONs in both conditions
+- `ENVIRONMENT.md` — Python interpreter path (edit if needed before the run)
 - `agent_output/` — scratch space for the agent
+- `cline_task/transcript.md`, `cline_task/terminal.log` — empty stubs
 
-## 4. Run one trial
+## 4. Edit ENVIRONMENT.md in each trial folder
+
+Open `trials/<id>/ENVIRONMENT.md` and replace the placeholder with the
+real path to your Python interpreter:
+
+```markdown
+## Python interpreter
+
+```bash
+/opt/anaconda3/envs/bmtk_pointnet/bin/python
+```
+```
+
+The agent reads this file and substitutes it wherever skill files write
+`<python-command>`.
+
+## 5. Run one trial
 
 1. Open only the trial folder in VS Code (`File > Open Folder...`).
-2. Start a fresh agent chat.
-3. Open the trial's `BENCHMARK_PROMPT.md` and ask the agent to complete it.
+2. Start a fresh agent chat in agent/agentic mode.
+3. Tell the agent: `Read BENCHMARK_PROMPT.md and complete the task described in it.`
 4. Let the agent finish without manual fixes.
 
-## 5. Capture + score
-
-For Cline:
+## 6. Score the trial
 
 ```bash
-python scripts/capture_cline_task.py --trial-id A001
-python scripts/evaluate_trial.py trials/A001
+# Option 1 — pass the interpreter path directly
+BMTK_PYTHON=/opt/anaconda3/envs/bmtk/bin/python \
+    python scripts/evaluate_trial.py trials/B001
+
+# Option 2 — use a conda env name
+BMTK_CONDA_ENV=bmtk python scripts/evaluate_trial.py trials/B001
+
+# Option 3 — activate the env first
+conda activate bmtk
+python scripts/evaluate_trial.py trials/B001
 ```
 
-For Copilot (manual transcript export, see §1, then):
+The same environment works for both PointNet and BioNet trials; the evaluator
+auto-detects the simulator from `TRIAL_METADATA.yaml`.
+
+Each run writes `trials/<id>/evaluation.json` and prints a summary table
+across all evaluated trials.
+
+## 7. Compare results
 
 ```bash
-python scripts/evaluate_trial.py trials/A001
+python scripts/summarize_trials.py
 ```
 
-Each evaluator run writes `evaluation.json` into the trial folder.
+Writes `trials/results.csv` — one row per trial, with columns for score,
+percentage, and every individual check (1 = pass, 0 = fail, blank = not
+applicable for that simulator).
 
-## 6. Trial hygiene checklist
+## 8. Trial hygiene checklist
 
 For every trial:
 
-- BXP2 env reachable (smoke test passes)
-- same agent + model + settings as the previous trial
-- same benchmark prompt
-- fresh VS Code window with trial folder as workspace root
-- fresh chat/session
-- no manual fixes before scoring
-- `evaluation.json` saved
+- [ ] Same agent, model, and settings as the paired trial
+- [ ] Same benchmark prompt (`--simulator` matches the prompt)
+- [ ] `ENVIRONMENT.md` points at the correct interpreter
+- [ ] Fresh VS Code window with the trial folder as workspace root
+- [ ] Fresh chat/session (no prior context)
+- [ ] No manual fixes before running `evaluate_trial.py`
+- [ ] `--model` flag passed to `init_trial.py` so results are labeled

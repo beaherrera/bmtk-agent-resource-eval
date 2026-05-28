@@ -23,8 +23,11 @@ run it.
 6. Provide a network build script, a simulation run script, any required
    parameter / config / component files, and use relative paths so the
    project can be moved.
-7. Validate the generated files as much as possible (parse JSON, parse Python,
-   try to load the simulator).
+7. After writing the scripts: **actually execute** the following in order and
+   confirm each step succeeds before moving on:
+   - `<python-command> build_network.py` — must produce HDF5 network files
+   - `<python-command> run_pointnet.py config.json` — must start without error
+     (let it run to completion or until the first timestep prints)
 8. At the end, summarize the files created and the commands needed to build
    and run the simulation.
 
@@ -42,16 +45,6 @@ downloading parameter sets from the Allen Cell Types Database.
 
 ## Python environment
 
-Use conda env `BXP2` (BMTK 1.0.6 + NEST 3.0). On this host the system NEST
-is broken and shadows the conda env's NEST via `PYTHONPATH`. Always run
-python like this:
-
-```bash
-unset PYTHONPATH
-LD_LIBRARY_PATH=/home/dhaufler/anaconda3/envs/BXP2/lib \
-  /home/dhaufler/anaconda3/envs/BXP2/bin/python <script.py>
-```
-
-Do NOT use `conda run -n BXP2 ...` (it inherits the broken `PYTHONPATH`).
-Do NOT use envs `BMTK_2023` or `bmtk` (broken NEST). Do NOT pip/conda install
-anything.
+Activate your BMTK conda environment before running any Python commands.
+See `README.md` for setup instructions.
+Do NOT run `pip install` or `conda install` for any packages.

@@ -27,7 +27,7 @@ with example parameter files you can then customize.
 Equivalent CLI form:
 
 ```bash
-python -m bmtk.utils.sim_setup --network network --tstop 5000.0 --dt 0.1 \
+<python-command> -m bmtk.utils.sim_setup --network network --tstop 5000.0 --dt 0.1 \
     --include-examples pointnet .
 ```
 

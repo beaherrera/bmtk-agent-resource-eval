@@ -223,9 +223,12 @@ def main() -> None:
     storage = Path(os.path.expanduser(args.storage))
     src = find_cline_task_for_trial(trial_dir, storage, args.task_id)
     dest = trial_dir / "cline_task"
-    if dest.exists():
-        if not args.force:
-            raise SystemExit(f"{dest} exists. Use --force to overwrite.")
+    # A pre-created empty stub (no ui_messages.json) is not treated as a conflict;
+    # only error when actual captured data is already present.
+    has_data = dest.is_dir() and (dest / "ui_messages.json").is_file()
+    if has_data and not args.force:
+        raise SystemExit(f"{dest} already has captured data. Use --force to overwrite.")
+    if dest.is_dir():
         shutil.rmtree(dest)
     shutil.copytree(src, dest)
 

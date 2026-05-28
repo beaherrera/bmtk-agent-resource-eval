@@ -26,14 +26,17 @@ if __name__ == '__main__':
 
 ## Invoking it
 
+Use the interpreter command from `AGENTS.md`, `README.md`, or `ENVIRONMENT.md`
+for the current project (referred to as `<python-command>` throughout):
+
 ```bash
-conda run -n BMTK_2023 python run_pointnet.py config.json
+<python-command> run_pointnet.py config.json
 ```
 
 Or, with MPI on a multi-core machine:
 
 ```bash
-conda run -n BMTK_2023 mpirun -np 4 python run_pointnet.py config.json
+mpirun -np 4 <python-command> run_pointnet.py config.json
 ```
 
 ## What happens at run time
@@ -71,8 +74,8 @@ When the environment is unavailable or you want a faster sanity pass, at
 least validate that the project is internally consistent:
 
 ```bash
-conda run -n BMTK_2023 python -m py_compile build_network.py run_pointnet.py
-conda run -n BMTK_2023 python -m json.tool config.json > /dev/null
+<python-command> -m json.tool config.json > /dev/null
+<python-command> -m py_compile build_network.py run_pointnet.py
 ```
 
 See skill 05 for deeper validation patterns.
