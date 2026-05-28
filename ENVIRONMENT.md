@@ -9,7 +9,7 @@ for your BMTK environment.  Examples:
 
 ```bash
 # Conda env by path
-/opt/anaconda3/envs/bmtk/bin/python
+/opt/anaconda3/envs/new_bmtk/bin/python
 
 # System Python (if the env is already activated in the shell)
 python

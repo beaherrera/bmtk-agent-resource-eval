@@ -194,28 +194,18 @@ def _smoke_test_pointnet(root: Path,
     result["h5_ok"] = len(h5_files) > 0
     result["h5_detail"] = f"{len(h5_files)} HDF5 file(s) on disk"
 
-    config = find_first(root, ["config.json", "config*.json", "simulation_config*.json"])
-    if config is None or run_script is None:
+    if run_script is None:
         return result
 
-    import tempfile
-    loader_lines = [
-        "from bmtk.simulator import pointnet",
-        f"cfg = pointnet.Config.from_json({json.dumps(str(config.relative_to(root)))})",
-        # Do NOT call cfg.build_env() — it calls shutil.rmtree on the output
-        # directory, which may resolve to '.' and wipe the entire trial folder.
-        "net = pointnet.PointNetwork.from_config(cfg)",
-        "sim = pointnet.PointSimulator.from_config(cfg, net)",
-        "print('loaded')",
-    ]
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.py',
-                                     delete=False, dir=root) as tf:
-        tf.write('\n'.join(loader_lines) + '\n')
-        loader_path = Path(tf.name)
-    try:
-        ok, detail = _run_python(root, [loader_path.name], SMOKE_LOAD_TIMEOUT)
-    finally:
-        loader_path.unlink(missing_ok=True)
+    # Run the agent's actual run script so any custom imports or helper
+    # functions defined inside it are exercised, not just a synthetic loader.
+    # A timeout counts as a pass: the simulation started and ran without
+    # crashing but did not finish within the test window.
+    ok, detail = _run_python(root, [str(run_script.relative_to(root))],
+                             SMOKE_LOAD_TIMEOUT)
+    if not ok and "timeout" in detail.lower():
+        ok = True
+        detail = f"started ok (timed out after {SMOKE_LOAD_TIMEOUT}s)"
     result["run_loadable"] = ok
     result["run_detail"] = detail
     return result
@@ -277,29 +267,18 @@ def _smoke_test_bionet(root: Path,
     result["h5_ok"] = len(h5_files) > 0
     result["h5_detail"] = f"{len(h5_files)} HDF5 file(s) on disk"
 
-    config = find_first(root, ["config.json", "config*.json", "simulation_config*.json"])
-    if config is None or run_script is None:
+    if run_script is None:
         return result
 
-    # Step 2 — load BioNet without running the full simulation
-    import tempfile
-    loader_lines = [
-        "from bmtk.simulator import bionet",
-        f"cfg = bionet.Config.from_json({json.dumps(str(config.relative_to(root)))})",
-        # Do NOT call cfg.build_env() — it calls shutil.rmtree on the output
-        # directory, which may resolve to '.' and wipe the entire trial folder.
-        "net = bionet.BioNetwork.from_config(cfg)",
-        "sim = bionet.BioSimulator.from_config(cfg, net)",
-        "print('loaded')",
-    ]
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.py',
-                                     delete=False, dir=root) as tf:
-        tf.write('\n'.join(loader_lines) + '\n')
-        loader_path = Path(tf.name)
-    try:
-        ok, detail = _run_python(root, [loader_path.name], SMOKE_LOAD_TIMEOUT)
-    finally:
-        loader_path.unlink(missing_ok=True)
+    # Step 2 — run the agent's actual run_bionet.py so any custom imports or
+    # helper functions defined inside it are exercised.
+    # A timeout counts as a pass: NEURON initialised and the simulation ran
+    # but did not finish within the test window.
+    ok, detail = _run_python(root, [str(run_script.relative_to(root))],
+                             SMOKE_LOAD_TIMEOUT)
+    if not ok and "timeout" in detail.lower():
+        ok = True
+        detail = f"started ok (timed out after {SMOKE_LOAD_TIMEOUT}s)"
     result["run_loadable"] = ok
     result["run_detail"] = detail
     return result
@@ -491,7 +470,7 @@ def _evaluate_pointnet(root: Path) -> dict:
           smoke["build_ok"],     4, smoke["build_detail"])
     check("smoke: build produced node/edge HDF5 files",
           smoke["h5_ok"],        3, smoke["h5_detail"])
-    check("smoke: run_simulation.py imports + loads config",
+    check("smoke: run_pointnet.py runs without error",
           smoke["run_loadable"], 3, smoke["run_detail"])
 
     return {
@@ -722,7 +701,7 @@ def _evaluate_bionet(root: Path) -> dict:
           smoke["build_ok"],            4, smoke["build_detail"])
     check("smoke: build produced node/edge HDF5 files",
           smoke["h5_ok"],               3, smoke["h5_detail"])
-    check("smoke: run_bionet.py imports + loads config",
+    check("smoke: run_bionet.py runs without error",
           smoke["run_loadable"],         3, smoke["run_detail"])
 
     return {

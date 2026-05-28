@@ -57,7 +57,7 @@ _PN_CHECKS = [
     "cell node types use PointNet conventions (point_process/point_neuron + nest:*)",
     "edge types use 'static_synapse' template",
     "run script imports bmtk.simulator.pointnet",
-    "smoke: run_simulation.py imports + loads config",
+    "smoke: run_pointnet.py runs without error",
 ]
 
 # BioNet (NEURON) only
@@ -75,7 +75,7 @@ _BN_CHECKS = [
     "referenced morphology files exist on disk",
     "run script imports bmtk.simulator.bionet",
     "smoke: NEURON mechanisms compiled",
-    "smoke: run_bionet.py imports + loads config",
+    "smoke: run_bionet.py runs without error",
 ]
 
 CHECK_COLUMNS = _SHARED_CHECKS + _PN_CHECKS + _BN_CHECKS
@@ -92,8 +92,8 @@ def _short(name: str) -> str:
         # Smoke test shorthands
         ("smoke:build_network.py runs without error",            "smoke:build_ok"),
         ("smoke:build produced node/edge HDF5 files",            "smoke:h5_ok"),
-        ("smoke:run_simulation.py imports + loads config",       "smoke:load_pn"),
-        ("smoke:run_bionet.py imports + loads config",           "smoke:load_bn"),
+        ("smoke:run_pointnet.py runs without error",              "smoke:run_pn"),
+        ("smoke:run_bionet.py runs without error",               "smoke:run_bn"),
         ("smoke:NEURON mechanisms compiled",                      "smoke:mech_ok"),
         # config has '…' section  →  cfg.…
         ("config has '",                                          "cfg."),
