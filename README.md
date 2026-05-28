@@ -109,10 +109,6 @@ python -c "import bmtk, nest; from bmtk.simulator import pointnet; print('PointN
 python -c "import bmtk, neuron; from bmtk.simulator import bionet; print('BioNet ok')"
 ```
 
-> **macOS Apple Silicon note:** conda-forge NEST on arm64 only supports the
-> `mt19937` / `mt19937_64` RNG. This does not affect correctness for these
-> benchmarks.
-
 ### Compile NEURON mechanisms (BioNet trials only)
 
 Run this once inside each BioNet trial folder before running or evaluating:
