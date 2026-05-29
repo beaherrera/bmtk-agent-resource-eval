@@ -30,3 +30,9 @@ network/*.h5
 .vscode/
 .continue/cache/
 .DS_Store
+
+# NEURON files
+*.o
+*.lo
+**/x86_64/**
+**/arm64/**
